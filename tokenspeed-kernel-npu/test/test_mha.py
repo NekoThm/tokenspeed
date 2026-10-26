@@ -62,11 +62,12 @@ def _paged_rows(
     return pages[:length]
 
 
-def test_mha_prefill() -> None:
+@pytest.mark.parametrize("head_dim", [64, 256])
+def test_mha_prefill(head_dim: int) -> None:
     lengths = [3, 5]
     cumulative = torch.tensor([0, 3, 8], dtype=torch.int32, device="npu")
-    q = torch.randn(8, 4, 64, dtype=torch.bfloat16, device="npu")
-    k = torch.randn(8, 2, 64, dtype=torch.bfloat16, device="npu")
+    q = torch.randn(8, 4, head_dim, dtype=torch.bfloat16, device="npu")
+    k = torch.randn(8, 2, head_dim, dtype=torch.bfloat16, device="npu")
     v = torch.randn_like(k)
 
     output = mha_prefill(q, k, v, cumulative, [0, 3, 8], 5)
@@ -80,14 +81,15 @@ def test_mha_prefill() -> None:
     torch.testing.assert_close(output, expected, atol=2e-2, rtol=2e-2)
 
 
-def test_mha_extend_with_paged_cache() -> None:
+@pytest.mark.parametrize("head_dim", [64, 256])
+def test_mha_extend_with_paged_cache(head_dim: int) -> None:
     page_size = 128
     q_lengths = [2, 3]
     cache_lengths = torch.tensor([5, 70], dtype=torch.int32, device="npu")
     cumulative_q = torch.tensor([0, 2, 5], dtype=torch.int32, device="npu")
     cumulative_kv = torch.tensor([0, 5, 75], dtype=torch.int32, device="npu")
-    q = torch.randn(5, 4, 64, dtype=torch.bfloat16, device="npu")
-    k_cache = torch.randn(4, page_size, 2, 64, dtype=torch.bfloat16, device="npu")
+    q = torch.randn(5, 4, head_dim, dtype=torch.bfloat16, device="npu")
+    k_cache = torch.randn(4, page_size, 2, head_dim, dtype=torch.bfloat16, device="npu")
     v_cache = torch.randn_like(k_cache)
     page_table = torch.tensor([[0, 0], [1, 2]], dtype=torch.int32, device="npu")
 
@@ -120,10 +122,11 @@ def test_mha_extend_with_paged_cache() -> None:
     torch.testing.assert_close(output, torch.cat(expected), atol=2e-2, rtol=2e-2)
 
 
-def test_mha_decode_with_paged_cache() -> None:
+@pytest.mark.parametrize("head_dim", [64, 256])
+def test_mha_decode_with_paged_cache(head_dim: int) -> None:
     page_size = 128
-    q = torch.randn(2, 4, 64, dtype=torch.bfloat16, device="npu")
-    k_cache = torch.randn(4, page_size, 2, 64, dtype=torch.bfloat16, device="npu")
+    q = torch.randn(2, 4, head_dim, dtype=torch.bfloat16, device="npu")
+    k_cache = torch.randn(4, page_size, 2, head_dim, dtype=torch.bfloat16, device="npu")
     v_cache = torch.randn_like(k_cache)
     page_table = torch.tensor([[0, 0], [1, 2]], dtype=torch.int32, device="npu")
     cache_lengths = torch.tensor([5, 70], dtype=torch.int32, device="npu")
